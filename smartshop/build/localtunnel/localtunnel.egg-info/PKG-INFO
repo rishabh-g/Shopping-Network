@@ -1,0 +1,12 @@
+Metadata-Version: 1.1
+Name: localtunnel
+Version: 0.6.1
+Summary: Magically expose a local port to the Internet
+Home-page: http://github.com/progrium/localtunnel
+Author: Jeff Lindsay
+Author-email: progrium@gmail.com
+License: MIT
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Topic :: Utilities
+Classifier: License :: OSI Approved :: MIT License

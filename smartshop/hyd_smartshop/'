@@ -1,0 +1,377 @@
+from django.http import HttpResponse
+from django.template import Context, loader
+from django.http import Http404,HttpResponseRedirect, HttpResponse
+from mcqportal.models import Questiondetails,Users,Answers,Q1,Q2,Q3,Q4,Profile,Skills,Following,Schools
+from django.core.urlresolvers import reverse
+from django.shortcuts import get_object_or_404,render
+import random 
+import copy
+from django.db.models import Count
+from django.db.models import Max
+import json
+import re
+
+
+def index(request):
+#	request.session['counter'] = copy.deepcopy([])
+#	request.session['mcq'] = copy.deepcopy([[],[],[],[]])
+	if 'uid' in request.session :
+#		name=request.session['name']	
+#		return HttpResponse(name);
+		uid=request.session['uid']
+		luser=Users.objects.get(id=uid)
+
+		return render(request,'mcqportal/index.html',{'username':luser.username})
+	else:
+		return render(request,'mcqportal/login.html')
+#	return render(request,'mcqportal/index.html')
+
+def mcqhome(request):
+
+	if 'uid' in request.session :
+		request.session['pg1session']=1
+		if 'pg2session' in request.session:
+			del request.session['pg2session']
+		if 'pg3session' in request.session:
+			del request.session['pg3session']
+		if 'pg4session' in request.session:
+			del request.session['pg4session']
+		if 'pg5session' in request.session:
+			del request.session['pg5session']
+		uid=request.session['uid']
+		luser=Users.objects.get(id=uid)
+		return render(request,'mcqportal/mcqhome.html',{'username':luser.username})
+	else:
+		return render(request,'mcqportal/login.html')
+
+
+
+
+def login(request):	
+	return render(request,'mcqportal/login.html')
+
+def signin(request):
+	try:
+		m = Users.objects.get(email=request.POST['eid_signIn'])
+	except Users.DoesNotExist:
+		context = {
+			'alerts': "invalid Email: u may SIGNUP",  
+			'class': "error"
+		}
+		return render(request,'mcqportal/login.html', context)
+	if m.password == request.POST['passwd_signIn']:
+		request.session['uid'] = m.id
+		return index(request)
+	#	return HttpResponse("You're logged in.")
+   	else:
+		context = {
+			'alerts': "Email and password did not match. Please try again.",  
+			'class': "error"
+		}
+		return render(request,'mcqportal/login.html', context)
+	
+		#return HttpResponse("Your username and password didn't match.")
+#	return HttpResponse("Successfully logged in");
+
+def gen_rand_list(num,x,y):
+	l=[]
+	for i in range(0,num):
+		a=random.randint(x,y)
+		l.append(a)
+	return l
+
+
+
+def signup(request):
+	name=request.POST['name']
+	email=request.POST['eid']
+	password=request.POST['passwd']
+	try:
+		m = Users.objects.get(email=email)
+		context = {
+			'alerts': "Email already exists.",  
+			'class': "error"
+		}
+		return render(request,'mcqportal/login.html', context)
+	except Users.DoesNotExist:
+		count = Users.objects.all().count()
+		if count == 0:
+			memid = 1
+		else:
+			memid = Users.objects.order_by("-id")[0].id + 1
+		user=Users(id=memid,username=name,email=email,password=password)
+		user.save()
+		request.session['uid']=user.id
+#	return HttpResponse(name + "   "  + email + "    " + password);
+		return index(request)
+
+
+def chksession(request):
+	if 'page' in request.POST:
+		if request.POST['page']=='pg1':
+			del request.session['pg1session']
+			request.session['pg2session']=1
+		if request.POST['page']=='pg2':
+			del request.session['pg2session']
+			request.session['pg3session']=1
+		if request.POST['page']=='pg3':
+			del request.session['pg3session']
+			request.session['pg4session']=1
+		if request.POST['page']=='pg4':
+			del request.session['pg4session']
+			request.session['pg5session']=1
+	
+	if 'pg1session' in request.session:
+		return pg1(request)
+	if 'pg5session' in request.session:
+		return pg5(request)
+	return create_resp(request)
+
+
+
+def logout(request):
+	if 'uid' in request.session:
+		del request.session['uid']
+#        del request.session
+        return render(request,'mcqportal/login.html')
+
+	
+
+def pg1(request):
+    if 'uid' not in request.session:
+        return render(request,'mcqportal/login.html')
+    if  'pg1session' not in request.session:
+    	return chksession(request)
+
+#the json implementation is commented
+
+
+#    if request.session['pg1session']==0:
+ #       return render(request,'mcqportal/index.html')
+#    uid=request.session['uid']
+#    try:
+#        a = list(Questiondetails.objects.filter(category=1))
+#        random.shuffle(a)
+#        mcq = a[:15]
+#	mjson=[]
+#	mjson="{'test':["
+#        for i in mcq:
+#		v=Questiondetails.objects.get(id=i.id)
+#        	w=Users.objects.get(id=uid)
+#            	b=Answers(memberid=w,qid=v,answer=0)
+#            	b.save()
+#		mjson +="{'Question':'"+re.escape(i.question)+"','OA':'"+re.escape(i.optiona)+"','OB':'"+re.escape(i.optionb)+"','OC':'"+re.escape(i.optionc)+"','OD':'"+re.escape(i.optiond)+"','i.selectedoption':''},"
+#	mjson+=']}'
+##		mjson.append({'Question':i.question,'OA':i.optiona,'OB':i.optionb,'OC':i.optionc,'OD':i.optiond,'selectedoption':""})
+   
+
+    uid=request.session['uid']
+    try:
+        a = list(Questiondetails.objects.filter(category=1))
+        random.shuffle(a)
+        mcq = a[:15]
+        for i in mcq:
+		v=Questiondetails.objects.get(id=i.id)
+        	w=Users.objects.get(id=uid)
+            	b=Answers(memberid=w,qid=v,answer=0)
+            	b.save()
+
+#The current implementation
+
+    except Questiondetails.DoesNotExist:
+        raise Http404
+#    mjson=json.dumps(mjson)
+    luser=Users.objects.get(id=uid)
+    return render(request,'mcqportal/pg1.html',{'mcq':mcq,'username':luser.username})
+
+
+
+
+def create_resp(request):
+    if 'uid' not in request.session :
+        return render(request,'mcqportal/login.html')
+
+    uid=request.session['uid']
+    if 'pg2session' in request.session:
+	cat=2
+    if 'pg3session' in request.session:
+	cat=3
+    if 'pg4session' in request.session:
+	cat=4
+    for i in request.POST:
+         try:
+             b=Answers.objects.filter(qid=i).filter(memberid=uid)
+             b.answer = request.POST[i]
+             b.save()
+         except:
+             apple=""
+
+#JSONidez and optimised Version
+#    try:
+#	l=gen_rand_list(15,1,184)
+#	l.sort()
+##	l=json.dumps(l)
+##	return HttpResponse(l)
+#       	c = list(Questiondetails.objects.filter(category=cat).filter(pk__in=l))
+#  #      mcq = c[:1]
+#        for i in c:
+#            v=Questiondetails.objects.get(id=i.id)
+#            w=Users.objects.get(id=uid)
+#            b=Answers(memberid=w,qid=v,answer=0)
+#            b.save()	
+#    except Questiondetails.DoesNotExist:
+#        raise Http404
+#    return render(request,'mcqportal/pg'+str(cat)+'.html',{'mcq':c})
+
+#Old non-json and brute-force implementaion 
+    try:
+#	l=json.dumps(l)
+#	return HttpResponse(l)
+       	c = list(Questiondetails.objects.filter(category=cat))
+        random.shuffle(c)
+        mcq = c[:15]
+        for i in c:
+            v=Questiondetails.objects.get(id=i.id)
+            w=Users.objects.get(id=uid)
+            b=Answers(memberid=w,qid=v,answer=0)
+            b.save()	
+    except Questiondetails.DoesNotExist:
+        raise Http404
+    luser=Users.objects.get(id=uid)
+    return render(request,'mcqportal/pg'+str(cat)+'.html',{'mcq':mcq,'username':luser.username})
+
+
+
+
+def pg5(request):
+        uid=request.session['uid']
+        if 'uid' not in request.session :
+            return render(request,'mcqportal/login.html')
+        uid=request.session['uid']
+        for i in request.POST:
+            try:
+                a=Answers.objects.filter(qid=i).aggregate(Max('id'))
+                b=Answers.objects.get(id=a['id__max'])
+                b.answer = request.POST[i]
+                b.save()
+            except:
+                apple=""
+
+        try:
+            w=Users.objects.get(id=uid)
+            mcq = list(Answers.objects.filter(memberid=w))
+            mcq = mcq[-4:]
+        except Questiondetails.DoesNotExist:
+            raise Http404
+        a=[]
+        for i in range(4):
+            temp = []
+            for j in range(1):
+                val = j+i
+                temp.append(mcq[val])
+            a.append(temp)
+        return render(request,'mcqportal/pg5.html',{'mcq':a})
+
+
+
+def save(request):      #for FB login
+    #    if request.GET['user'] in
+    try:
+        user = Users.objects.get(email=request.GET['email'])
+        request.session['uid']=user.id
+    except:
+        count = Users.objects.all().count()
+        if count == 0:
+            memid = 1
+        else:
+            memid = Users.objects.order_by("-id")[0].id + 1
+        user=Users(id=memid,username=request.GET['user'],email=request.GET['email'])
+        user.save()
+        request.session['uid']=user.id
+#        return render(request,'mcqportal/index.html')
+        #return HttpResponseRedirect("mcqportal/index.html")
+    return render(request,'mcqportal/index.html')
+
+
+def analytics(request):
+   
+    return render(request,'mcqportal/analytics.html')
+
+def result(request):
+   
+    return render(request,'mcqportal/result.html')
+
+def profile(request):
+#The script that displays and updates profile information
+  
+
+#Check for user session to see if a user is logged in
+    	if 'uid' not in request.session:
+        	return render(request,'mcqportal/login.html')
+    	uid=request.session['uid']
+
+
+#Process updates, insertion and deletion
+	if 'name' in request.GET:
+		name=request.GET['name']
+		Education=request.GET['Education']
+		Place=request.GET['Place']
+
+		profile=Profile(memberid=Users.objects.get(id=uid),name=name,institute=Education,address=Place)
+		profile.save()
+	
+	if 'summary' in request.GET:
+		summary=request.GET['summary']
+		profile=Profile.objects.get(memberid=uid)
+		profile.about=summary
+		profile.save()
+
+	
+	if 'skill' in request.GET:
+		skill=request.GET['skill']
+		newskill=Skills(memberid=Users.objects.get(id=uid),skill=skill)
+		newskill.save()
+
+	if 'removeSkill' in request.GET:
+		skill=request.GET['removeSkill']
+		delskill=Skills.objects.get(skill=skill)
+		delskill.delete()
+
+#Get information form database
+	profile=Profile.objects.get(memberid=uid)
+	skills=Skills.objects.filter(memberid=uid)
+	following=Following.objects.filter(memberid=uid)
+	education=Schools.objects.filter(memberid=uid)
+
+    	return render(request,'mcqportal/profile.html',{'profile':profile,'skills':skills,'education':education,'following':following})
+
+
+
+def uprofile(request):
+	if 'name' in request.POST:
+		name=request.POST['name']
+		Education=request.POST['Education']
+		Place=request.POST['Place']
+
+	return HttpResponse(name+"Edu"+Education+"place"+Place)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
