@@ -1,4 +1,0 @@
-[console_scripts]
-localtunneld = localtunnel.server.cli:run
-localtunnel-beta = localtunnel.client:run
-
