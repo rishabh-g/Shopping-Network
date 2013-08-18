@@ -1,3 +1,0 @@
-#use pip install -r on this
-django-cron
-mysql-python
